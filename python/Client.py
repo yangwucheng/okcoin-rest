@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # encoding: utf-8
 #客户端调用，用于查看API返回结果
+import pymongo as pymongo
+from pymongo import MongoClient
 
 from OkcoinSpotAPI import OKCoinSpot
 from OkcoinFutureAPI import OKCoinFuture
@@ -9,19 +11,65 @@ from OkcoinFutureAPI import OKCoinFuture
 #初始化apikey，secretkey,url
 apikey = 'XXXX'
 secretkey = 'XXXXX'
-okcoinRESTURL = 'www.okcoin.com'   #请求注意：国内账号需要 修改为 www.okcoin.cn  
+okcoinRESTURL = 'www.okex.com'   #请求注意：国内账号需要 修改为 www.okcoin.cn
+#okcoinRESTURL = 'www.okcoin.cn'
 
-#现货API
+# 现货API
 okcoinSpot = OKCoinSpot(okcoinRESTURL,apikey,secretkey)
 
-#期货API
-okcoinFuture = OKCoinFuture(okcoinRESTURL,apikey,secretkey)
+# 期货API
+# okcoinFuture = OKCoinFuture(okcoinRESTURL,apikey,secretkey)
 
-print (u' 现货行情 ')
-print (okcoinSpot.ticker('btc_usd'))
+client = MongoClient('localhost', 27017)
+market_data = client.market_data
 
-print (u' 现货深度 ')
-print (okcoinSpot.depth('btc_usd'))
+symbols = [
+    'ltc_btc', 'eth_btc', 'etc_btc', 'bch_btc', 'btc_usdt',
+    'eth_usdt', 'ltc_usdt', 'etc_usdt', 'bch_usdt', 'etc_eth',
+    'bt1_btc', 'bt2_btc', 'btg_btc', 'qtum_btc', 'hsr_btc',
+    'neo_btc', 'gas_btc', 'qtum_usdt', 'hsr_usdt', 'neo_usdt',
+    'gas_usdt'
+]
+
+types = [
+    '1min', '3min', '5min', '15min', '30min',
+    '1day', '3day', '1week', '1hour', '2hour',
+    '4hour', '6hour', '12hour'
+]
+
+for symbol in symbols:
+    for type in types:
+        try:
+            print('start process %(symbol)s %(type)s' %{'symbol': symbol, 'type':type})
+            klines = okcoinSpot.kline(symbol, type)
+            if isinstance(klines, dict):
+                print(klines)
+                continue
+            # print(klines)
+            for kline in klines:
+                # print(kline)
+                kline_collection = pymongo.collection.Collection(market_data, 'okcoin_kline_' + type)
+                kline_collection.replace_one({'symbol': symbol, 'timestamp': kline[0]},
+                                             {
+                                                 'symbol': symbol,
+                                                 'timestamp': kline[0],
+                                                 'open':kline[1],
+                                                 'high': kline[2],
+                                                 'low':kline[3],
+                                                 'close':kline[4],
+                                                 'vol':kline[5]
+                                             },
+                                             True)
+            print('end process %(symbol)s %(type)s' % {'symbol': symbol, 'type': type})
+        except Exception as e:
+            print('process %(symbol)s %(type)s exception' % {'symbol': symbol, 'type': type})
+            print(e)
+
+# print (u' 现货行情 ')
+# print (okcoinSpot.ticker('btc_usd'))
+#
+# print (u' 现货深度 ')
+# print (okcoinSpot.depth('btc_usd'))
 
 #print (u' 现货历史交易信息 ')
 #print (okcoinSpot.trades())

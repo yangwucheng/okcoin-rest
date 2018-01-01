@@ -18,6 +18,15 @@ class OKCoinSpot:
             params = 'symbol=%(symbol)s' %{'symbol':symbol}
         return httpGet(self.__url,TICKER_RESOURCE,params)
 
+    def kline(self,symbol = '', type=''):
+        KLINE_RESOURCE = "/api/v1/kline.do"
+        params=''
+        if symbol:
+            params = 'symbol=%(symbol)s' %{'symbol':symbol}
+        if type:
+            params = params + '&type=%(type)s' % {'type':type}
+        return httpGet(self.__url,KLINE_RESOURCE,params)
+
     #获取OKCOIN现货市场深度信息
     def depth(self,symbol = ''):
         DEPTH_RESOURCE = "/api/v1/depth.do"
